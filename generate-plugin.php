@@ -32,6 +32,9 @@ class PluginGenerator {
 
         $this->class_admin_manage_controller = new Nette\PhpGenerator\ClassType("AdminManagePlugin");
         $this->class_admin_manage_controller->setExtends("AppController"); 
+
+        $this->class_model = new Nette\PhpGenerator\ClassType( $this->plugin_name_camel_case . "Model"); 
+        $this->class_model->setExtends("AppModel"); 
     }
 
     private function formatName($name) {
@@ -236,9 +239,14 @@ class PluginGenerator {
 
         $lines = array(
             '$this->init();' . "\n",
-            '$var1 = "hello";',
-            '$var2 = "world";',
-            'return $this->partial("admin_manage_plugin", compact("var1", "var2"));'
+            '$settings = $this->getSettings();' . "\n",
+            'if(!empty($this->post)) {',
+			"\t" . 'foreach($settings as $key => $value) {',
+			"\t\t" . '$settings[$key] = isset($this->post[$key]) ? $this->post[$key] : null;',
+			"\t" . '}' . "\n",
+            "\t"  . '$this->setSettings($settings);',
+		    '}' . "\n",
+            'return $this->partial("admin_manage_plugin", compact("settings"));',
         );
 
         foreach($lines as $l) {
@@ -251,6 +259,8 @@ class PluginGenerator {
             ->setVisibility("private");
 
         $lines = array(
+            '// Set the company ID',
+            '$this->company_id = Configure::get(\'Blesta.company_id\');' . "\n",
             '//load language',
             'Language::loadLang("' . $this->plugin_name_underscored . '", null, PLUGINDIR . "'.$this->plugin_name_underscored.'" . DS . "language" . DS);' . "\n",
             '// Require login',
@@ -264,9 +274,61 @@ class PluginGenerator {
         }
     }
 
+    private function generateAdminManagePluginGetSettings() {
+
+        $method = $this->class_admin_manage_controller->addMethod("getSettings")
+            ->setVisibility("private")
+            ->addComment("Return the current settings")
+            ->addComment("@return    array   An array containing the current settings as key value pairs");
+        
+
+        $lines = array(
+            '$fields = array(',
+            "\t" . '"' . $this->plugin_name_underscored .  '_test_setting"',
+            ');' . "\n",
+            '$vars = array();' . "\n",
+            'foreach($fields as $field) {',
+            "\t" . '$entry = $this->parent->Companies->getSetting($this->company_id, $field);',
+            "" . '    if($entry === FALSE) {',
+            "" . '        $vars[$field] = FALSE;',
+            "\t" . '}',
+            "\t" . 'else {',
+            "\t\t" . '$vars[$field] = $entry->value;',
+            "\t" . '}',
+            '}' . "\n",
+            'return $vars;',
+        );
+
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
+    private function generateAdminManagePluginSetSettings() {
+        $method = $this->class_admin_manage_controller->addMethod("setSettings")
+            ->setVisibility("private")
+            ->addComment("Saves the given settings")
+            ->addComment('@param    array   $vars   Key value pairs for the settings that should be saved');
+
+        $method->addParameter("vars")
+            ->setTypeHint("array");
+
+        $lines = array(
+            'foreach($vars as $key => $value) {',
+            "\t" . '$this->parent->Companies->setSetting($this->company_id, $key, $value);',
+            '}',
+        );
+        
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
     private function generateAdminManagePlugin() {
         $this->generateAdminManagePluginInit();
         $this->generateAdminManagePluginIndex();
+        $this->generateAdminManagePluginGetSettings();
+        $this->generateAdminManagePluginSetSettings();
     }
 
     public function getOutputAdminManagePlugin() {
@@ -275,7 +337,7 @@ class PluginGenerator {
     }
 
     private function generateModel() {
-
+        
     }
 
     public function getOutputModel() {
@@ -290,7 +352,8 @@ class PluginGenerator {
     private function getLanguageStrings() {
         return array( 
             $this->plugin_name_camel_case . ".index.boxtitle_manage" => $this->plugin_name,
-            $this->plugin_name_camel_case . ".index.submit" => "Save Settings"
+            $this->plugin_name_camel_case . ".index.submit" => "Save Settings",
+            $this->plugin_name_camel_case . ".index." . $this->plugin_name_underscored .  "_test_setting" => "Test Setting Label"
         );
     }
 
