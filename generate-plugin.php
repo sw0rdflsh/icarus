@@ -192,6 +192,7 @@ class PluginGenerator {
     }
 
     private function generatePlugin() {
+        $this->generatePluginConstructor();
         $this->generatePluginInstall();
         $this->generatePluginUnInstall();
         $this->generatePluginUpgrade();
