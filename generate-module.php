@@ -202,7 +202,7 @@ class ModuleGenerator {
         $method->addParameter("vars", null);
     }
 
-    private function generateAdminAddFields() {
+    private function generateGetAdminAddFields() {
         $method = $this->class->addMethod("getAdminAddFields")
             ->setVisibility("public")
             ->addComment("Returns all fields to display to an admin attempting to add a service with the module")
@@ -210,10 +210,26 @@ class ModuleGenerator {
             ->addComment('@param    mixed           $vars       A stdClass object representing a set of post fields')
             ->addComment('@return   ModuleFields    A ModuleFields object, containg the fields to render as well as any additional HTML markup to include');
 
+        $method->addParameter("package");
         $method->addParameter("vars", null);
+
+        $body_lines = array(
+            'Loader::loadHelpers($this, array("Html"));',
+            '$fields = new ModuleFields();' . "\n",
+            '$module_fields = $fields->label("testModule.label", "testModule.testField");',
+            '$module_fields->attach(',
+            "\t" . '$fields->fieldText("testField", $this->Html->ifSet($vars->testField), array("id" => "testModule.testField"))',
+            ');' . "\n",
+            '$fields->setField($module_fields);' . "\n",
+            'return $fields;'
+        );
+
+        foreach($body_lines as $l) {
+            $method->addBody($l);
+        }
     }
 
-    private function generateAdminEditFields() {
+    private function generateGetAdminEditFields() {
         $method = $this->class->addMethod("getAdminEditFields")
             ->setVisibility("public")
             ->addComment("Returns all fields to display to an admin attempting to edit a service with the module")
@@ -221,10 +237,28 @@ class ModuleGenerator {
             ->addComment('@param    mixed           $vars       A stdClass object representing a set of post fields')
             ->addComment('@return   ModuleFields    A ModuleFields object, containg the fields to render as well as any additional HTML markup to include');
 
+        $method->addParameter("package");
         $method->addParameter("vars", null);
+
+        $body_lines = array(
+            'Loader::loadHelpers($this, array("Html"));',
+            '$fields = new ModuleFields();' . "\n",
+            '$module_fields = $fields->label("testModule.label", "testModule.testField");',
+            '$module_fields->attach(',
+            "\t" . '$fields->fieldText("testField", $this->Html->ifSet($vars->testField), array("id" => "testModule.testField"))',
+            ');' . "\n",
+            '$fields->setField($module_fields);' . "\n",
+            'return $fields;'
+        );
+
+        foreach($body_lines as $l) {
+            $method->addBody($l);
+        }
+
+        
     }
 
-    private function generateClientAddFields() {
+    private function generateGetClientAddFields() {
         $method = $this->class->addMethod("getClientAddFields")
             ->setVisibility("public")
             ->addComment("Returns all fields to display to a client attempting to add a service with the module")
@@ -232,7 +266,17 @@ class ModuleGenerator {
             ->addComment('@param    mixed           $vars       A stdClass object representing a set of post fields')
             ->addComment('@return   ModuleFields    A ModuleFields object, containg the fields to render as well as any additional HTML markup to include');
 
+        $method->addParameter("package");
         $method->addParameter("vars", null);
+
+        $body_lines = array(
+            '$fields = new ModuleFields();',
+            'return $fields;'
+        );
+
+        foreach($body_lines as $l) {
+            $method->addBody($l);
+        }
     }
 
     private function generateManageModule() {
@@ -253,12 +297,9 @@ class ModuleGenerator {
             '$this->view = new View("manage", "default");',
             '$this->view->base_uri = $this->base_uri;',
             '$this->view->setDefaultView("components" . DS . "modules" . DS . "' . $this->module_name_underscored . '" . DS);'  . "\n",
-            'if (empty($vars)) {',
-            "\t" . '$vars = $module_row->meta;',
-            '}' . "\n",
             '// Load the helpers required for this view',
             'Loader::loadHelpers($this, array("Form", "Html", "Widget"));',
-            '$view->set("module", $module);',
+            '$this->view->set("module", $module);',
             '$this->view->set("vars", (object)$vars);',
             'return $this->view->fetch();'
         );
@@ -284,9 +325,6 @@ class ModuleGenerator {
             '$this->view = new View("add_row", "default");',
             '$this->view->base_uri = $this->base_uri;',
             '$this->view->setDefaultView("components" . DS . "modules" . DS . "' . $this->module_name_underscored . '" . DS);'  . "\n",
-            'if (empty($vars)) {',
-            "\t" . '$vars = $module_row->meta;',
-            '}' . "\n",
             '// Load the helpers required for this view',
             'Loader::loadHelpers($this, array("Form", "Html", "Widget"));',
             '$this->view->set("vars", (object)$vars);',
@@ -346,7 +384,23 @@ class ModuleGenerator {
             ->setTypeHint("array");
         $method->addParameter("parent_package", null);
         $method->addParameter("parent_service", null);
-        $method->addParameter("status", "pending");    
+        $method->addParameter("status", "pending"); 
+        
+        $body_lines = array(
+            '// Get the module row used for this service',
+            '$row = $this->getModuleRow();' . "\n",
+            'return array(',
+            "\t" . 'array(',
+            "\t\t" . '"key" => "testField",',
+            "\t\t" . '"value" => (isset($vars["testField"]) ? $vars["testField"] : null),',
+            "\t\t" . '"encrypted" => 0',
+            "\t" . ')',
+            ');',
+        );
+
+        foreach($body_lines as $l) {
+            $method->addBody($l);
+        }
     }
 
     private function generateEditService() {
@@ -557,9 +611,9 @@ class ModuleGenerator {
 
         //fields
         $this->generatePackageFields();
-        $this->generateAdminAddFields();
-        $this->generateAdminEditFields();
-        $this->generateClientAddFields();
+        $this->generateGetAdminAddFields();
+        $this->generateGetAdminEditFields();
+        $this->generateGetClientAddFields();
 
         //settings
         $this->generateManageModule();

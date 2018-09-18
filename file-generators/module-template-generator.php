@@ -180,7 +180,7 @@ class ModuleTemplateGenerator {
             '$this->Form->fieldHidden(\'row_id\', $this->Html->ifSet($module->rows[$i]->id));',
             '?>',
             '',
-            '<a href="<?php echo $this->Html->safe($this->base_uri . \'settings/company/modules/deleterow/\' . $this->Html->ifSet($module->id) . \'/\' . $this->Html->ifSet($module->rows[$i]->id) . \'/\'); ?>" class="manage" rel="<?php echo $this->Html->safe($this->_(\''. $this->module_name_camel_case .'.manage.module_row.confirm_delete\', true)) . $module->rows[$i]->meta->username; ?>"><?php $this->_(\'' . $this->module_name_camel_case . '.manage.module_row.delete\'); ?></a>',                  
+            '<a href="<?php echo $this->Html->safe($this->base_uri . \'settings/company/modules/deleterow/\' . $this->Html->ifSet($module->id) . \'/\' . $this->Html->ifSet($module->rows[$i]->id) . \'/\'); ?>" class="manage" rel="<?php echo $this->Html->safe($this->_(\''. $this->module_name_camel_case .'.manage.module_row.confirm_delete\', true)) ?>"><?php $this->_(\'' . $this->module_name_camel_case . '.manage.module_row.delete\'); ?></a>',                  
             '<?php',
             '$this->Form->end();',
             '?>',
