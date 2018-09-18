@@ -5,6 +5,7 @@ require "generate-nmgateway.php";
 require "vendor/autoload.php";
 require "file-generators/language-generator.php";
 require "file-generators/module-template-generator.php";
+require "file-generators/plugin-template-generator.php";
 
 
 $args = getopt("n:t:o::", array("name:", "type:", "out::"));

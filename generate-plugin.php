@@ -32,6 +32,9 @@ class PluginGenerator {
 
         $this->class_admin_manage_controller = new Nette\PhpGenerator\ClassType("AdminManagePlugin");
         $this->class_admin_manage_controller->setExtends("AppController"); 
+
+        $this->class_model = new Nette\PhpGenerator\ClassType( $this->plugin_name_camel_case . "Model"); 
+        $this->class_model->setExtends("AppModel"); 
     }
 
     private function formatName($name) {
@@ -192,6 +195,7 @@ class PluginGenerator {
     }
 
     private function generatePlugin() {
+        $this->generatePluginConstructor();
         $this->generatePluginInstall();
         $this->generatePluginUnInstall();
         $this->generatePluginUpgrade();
@@ -234,9 +238,15 @@ class PluginGenerator {
             ->setVisibility("public");
 
         $lines = array(
-            '$var1 = "hello";',
-            '$var2 = "world";',
-            'return $this->partial("admin_manage_plugin", compact("var1", "var2"));'
+            '$this->init();' . "\n",
+            '$settings = $this->getSettings();' . "\n",
+            'if(!empty($this->post)) {',
+			"\t" . 'foreach($settings as $key => $value) {',
+			"\t\t" . '$settings[$key] = isset($this->post[$key]) ? $this->post[$key] : null;',
+			"\t" . '}' . "\n",
+            "\t"  . '$this->setSettings($settings);',
+		    '}' . "\n",
+            'return $this->partial("admin_manage_plugin", compact("settings"));',
         );
 
         foreach($lines as $l) {
@@ -244,8 +254,81 @@ class PluginGenerator {
         }
     }
 
+    private function generateAdminManagePluginInit() {
+        $method = $this->class_admin_manage_controller->addMethod("init")
+            ->setVisibility("private");
+
+        $lines = array(
+            '// Set the company ID',
+            '$this->company_id = Configure::get(\'Blesta.company_id\');' . "\n",
+            '//load language',
+            'Language::loadLang("' . $this->plugin_name_underscored . '", null, PLUGINDIR . "'.$this->plugin_name_underscored.'" . DS . "language" . DS);' . "\n",
+            '// Require login',
+            '$this->parent->requireLogin();' . "\n",
+            '// Set the view to render for all actions under this controller',
+            '$this->view->setView(null,"' . $this->plugin_name_camel_case . '.default");'
+        );
+
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
+    private function generateAdminManagePluginGetSettings() {
+
+        $method = $this->class_admin_manage_controller->addMethod("getSettings")
+            ->setVisibility("private")
+            ->addComment("Return the current settings")
+            ->addComment("@return    array   An array containing the current settings as key value pairs");
+        
+
+        $lines = array(
+            '$fields = array(',
+            "\t" . '"' . $this->plugin_name_underscored .  '_test_setting"',
+            ');' . "\n",
+            '$vars = array();' . "\n",
+            'foreach($fields as $field) {',
+            "\t" . '$entry = $this->parent->Companies->getSetting($this->company_id, $field);',
+            "" . '    if($entry === FALSE) {',
+            "" . '        $vars[$field] = FALSE;',
+            "\t" . '}',
+            "\t" . 'else {',
+            "\t\t" . '$vars[$field] = $entry->value;',
+            "\t" . '}',
+            '}' . "\n",
+            'return $vars;',
+        );
+
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
+    private function generateAdminManagePluginSetSettings() {
+        $method = $this->class_admin_manage_controller->addMethod("setSettings")
+            ->setVisibility("private")
+            ->addComment("Saves the given settings")
+            ->addComment('@param    array   $vars   Key value pairs for the settings that should be saved');
+
+        $method->addParameter("vars")
+            ->setTypeHint("array");
+
+        $lines = array(
+            'foreach($vars as $key => $value) {',
+            "\t" . '$this->parent->Companies->setSetting($this->company_id, $key, $value);',
+            '}',
+        );
+        
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
     private function generateAdminManagePlugin() {
+        $this->generateAdminManagePluginInit();
         $this->generateAdminManagePluginIndex();
+        $this->generateAdminManagePluginGetSettings();
+        $this->generateAdminManagePluginSetSettings();
     }
 
     public function getOutputAdminManagePlugin() {
@@ -254,7 +337,7 @@ class PluginGenerator {
     }
 
     private function generateModel() {
-
+        
     }
 
     public function getOutputModel() {
@@ -264,6 +347,14 @@ class PluginGenerator {
 
     public function genereateZipFileName() {
         return "$this->plugin_name_underscored.zip";
+    }
+
+    private function getLanguageStrings() {
+        return array( 
+            $this->plugin_name_camel_case . ".index.boxtitle_manage" => $this->plugin_name,
+            $this->plugin_name_camel_case . ".index.submit" => "Save Settings",
+            $this->plugin_name_camel_case . ".index." . $this->plugin_name_underscored .  "_test_setting" => "Test Setting Label"
+        );
     }
 
     public function generateZip() {
@@ -276,9 +367,10 @@ class PluginGenerator {
             $zip->addEmptyDir("$this->plugin_name_underscored/views/default");
             $zip->addEmptyDir("$this->plugin_name_underscored/language");
            
+            $language_generator = new LanguageGenerator();
             foreach($languages as $l) {
                 $zip->addEmptyDir("$this->plugin_name_underscored/language/$l");
-                $zip->addFromString("$this->plugin_name_underscored/language/$l/$this->plugin_name_underscored.php", "<?php\n");
+                $zip->addFromString("$this->plugin_name_underscored/language/$l/$this->plugin_name_underscored.php", $language_generator->generate($this->getLanguageStrings()));
             }
 
             $zip->addEmptyDir("$this->plugin_name_underscored/controllers");
@@ -290,7 +382,9 @@ class PluginGenerator {
             $zip->addFromString($this->plugin_name_underscored . "/" . "controllers/admin_manage_plugin.php", "<?php\n" . $this->getOutputAdminManagePlugin());
             $zip->addFromString($this->plugin_name_underscored . "/" . "config.json", $this->generateConfig());
 
-            $zip->addFromString($this->plugin_name_underscored . "/" . "views/default/admin_manage_plugin.pdt", "this is the settings view");
+
+            $template_generator = new PluginTemplateGenerator($this->plugin_name_camel_case, $this->plugin_name_underscored);
+            $zip->addFromString($this->plugin_name_underscored . "/" . "views/default/admin_manage_plugin.pdt", $template_generator->generateAdminManagePlugin());
             $zip->close();
         }
     }
