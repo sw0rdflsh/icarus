@@ -235,6 +235,7 @@ class PluginGenerator {
             ->setVisibility("public");
 
         $lines = array(
+            '$this->init();' . "\n",
             '$var1 = "hello";',
             '$var2 = "world";',
             'return $this->partial("admin_manage_plugin", compact("var1", "var2"));'
@@ -245,7 +246,26 @@ class PluginGenerator {
         }
     }
 
+    private function generateAdminManagePluginInit() {
+        $method = $this->class_admin_manage_controller->addMethod("init")
+            ->setVisibility("private");
+
+        $lines = array(
+            '//load language',
+            'Language::loadLang("' . $this->plugin_name_underscored . '", null, PLUGINDIR . "'.$this->plugin_name_underscored.'" . DS . "language" . DS);' . "\n",
+            '// Require login',
+            '$this->parent->requireLogin();' . "\n",
+            '// Set the view to render for all actions under this controller',
+            '$this->view->setView(null,"' . $this->plugin_name_camel_case . '.default");'
+        );
+
+        foreach($lines as $l) {
+            $method->addBody($l);
+        }
+    }
+
     private function generateAdminManagePlugin() {
+        $this->generateAdminManagePluginInit();
         $this->generateAdminManagePluginIndex();
     }
 
@@ -267,6 +287,13 @@ class PluginGenerator {
         return "$this->plugin_name_underscored.zip";
     }
 
+    private function getLanguageStrings() {
+        return array( 
+            $this->plugin_name_camel_case . ".index.boxtitle_manage" => $this->plugin_name,
+            $this->plugin_name_camel_case . ".index.submit" => "Save Settings"
+        );
+    }
+
     public function generateZip() {
         $languages = ["en_us", "de_de"];
 
@@ -277,9 +304,10 @@ class PluginGenerator {
             $zip->addEmptyDir("$this->plugin_name_underscored/views/default");
             $zip->addEmptyDir("$this->plugin_name_underscored/language");
            
+            $language_generator = new LanguageGenerator();
             foreach($languages as $l) {
                 $zip->addEmptyDir("$this->plugin_name_underscored/language/$l");
-                $zip->addFromString("$this->plugin_name_underscored/language/$l/$this->plugin_name_underscored.php", "<?php\n");
+                $zip->addFromString("$this->plugin_name_underscored/language/$l/$this->plugin_name_underscored.php", $language_generator->generate($this->getLanguageStrings()));
             }
 
             $zip->addEmptyDir("$this->plugin_name_underscored/controllers");
@@ -291,7 +319,9 @@ class PluginGenerator {
             $zip->addFromString($this->plugin_name_underscored . "/" . "controllers/admin_manage_plugin.php", "<?php\n" . $this->getOutputAdminManagePlugin());
             $zip->addFromString($this->plugin_name_underscored . "/" . "config.json", $this->generateConfig());
 
-            $zip->addFromString($this->plugin_name_underscored . "/" . "views/default/admin_manage_plugin.pdt", "this is the settings view");
+
+            $template_generator = new PluginTemplateGenerator($this->plugin_name_camel_case, $this->plugin_name_underscored);
+            $zip->addFromString($this->plugin_name_underscored . "/" . "views/default/admin_manage_plugin.pdt", $template_generator->generateAdminManagePlugin());
             $zip->close();
         }
     }
