@@ -1,14 +1,39 @@
 <?php
 class ModuleGenerator {
 
+    /**
+     * Refernce for the module class to be generated
+     * 
+     * @access  private
+     */
     private $class;
 
+    /**
+     * Name of the module in no specific form
+     * 
+     * @access private
+     */
     private $module_name;
 
+    /**
+     * Object containing configuration options, to generate the config.json file of the module
+     * 
+     * @access private
+     */
     private $config;
 
+    /**
+     * Path to save the generated zip-file
+     * 
+     * @access  private
+     */
     private $zip_save_dir;
 
+    /**
+     * Class Constructor
+     * 
+     * @access  public
+     */
     public function __construct($module_name, $config = [], $out_dir = ".") {
         $this->module_name = $module_name;
 
@@ -22,7 +47,13 @@ class ModuleGenerator {
         $this->class->setExtends("Module");
     }
 
-    
+    /**
+     * Formats a name to something that can be more easily converted to camel case
+     * 
+     * @access  private
+     * @param   string  $name   Name of the module
+     * @return  string  Converted name
+     */
     private function formatName($name) {
         $new_name = "";
         $name[0] = strtoupper($name[0]);
@@ -61,6 +92,15 @@ class ModuleGenerator {
         return preg_replace_callback('/_([a-z])/', $func, $str);
     }
 
+    /**
+     * Converts a string from camel case to underscore case
+     * 
+     * ThisIsGood => this_is_good
+     * 
+     * @access  private
+     * @param   string  $str    String to be converted to underscore case
+     * @return  string  The given string with underscored
+     */
     function toUnderScoreCase($str) {
         $characters = str_split($str);
         $first_char = TRUE;
@@ -84,7 +124,14 @@ class ModuleGenerator {
         return $underscore_name;
     }
 
+    /**
+     * Generates the config.json file of the module
+     * 
+     * @access  private
+     * @return  string  json contents for the config.json file
+     */
     private function generateConfig() {
+        //default value for the config.json
         $config_json = array(
             'version' => "1.0.0",
             'name' => $this->module_name,
@@ -135,11 +182,17 @@ class ModuleGenerator {
         return json_encode($config_json);
     }
 
+    /**
+     * Generates the constructor of the module
+     * 
+     * @access  private
+     */
     private function generateConstructor() {
         $method = $this->class->addMethod("__construct")
             ->setVisibility("public")
             ->addComment("Class Constructor");
 
+        //load config.json file, and input component
         $lines = array(
             'Language::loadLang("'. $this->module_name_underscored .'", null, dirname(__FILE__) . DS . "language" . DS);',
             '$this->loadConfig(dirname(__FILE__) . DS . "config.json");',
@@ -151,12 +204,22 @@ class ModuleGenerator {
         }
     }
 
+    /**
+     * Generates the install method of the module
+     * 
+     * @access  private
+     */
     private function generateInstall() {
         $method = $this->class->addMethod("install")
             ->setVisibility("public")
             ->addComment("Performs the installation of the module.");
     }
 
+    /**
+     * Generates the uninstall method of the module
+     * 
+     * @access  private
+     */
     private function generateUninstall() {
         $method = $this->class->addMethod("uninstall") 
             ->setVisibility("public")
@@ -168,6 +231,11 @@ class ModuleGenerator {
         $method->addParameter("last_instance");
     }
 
+    /**
+     * Generates the upgrade method of the module
+     * 
+     * @access  private
+     */
     private function generateUpgrade() {
         $method = $this->class->addMethod("upgrade")
             ->setVisibility("public")
@@ -176,6 +244,7 @@ class ModuleGenerator {
 
         $method->addParameter("current_version");
 
+        //deny downgrades as default
         $lines = array(
             'if (version_compare($this->version, $current_version) < 0) {',
             "\t" .'$this->Input->setErrors(array(',  
@@ -192,6 +261,11 @@ class ModuleGenerator {
         }
     }
 
+    /**
+     * Generates the getPackageFields method of the module
+     * 
+     * @access  private
+     */
     private function generatePackageFields() {
         $method = $this->class->addMethod("getPackageFields")
             ->setVisibility("public")
@@ -202,6 +276,13 @@ class ModuleGenerator {
         $method->addParameter("vars", null);
     }
 
+    /**
+     * Generates the getAdminAddFiels of the module
+     * 
+     * Generates the method with a dummy implementation to make extending easier once the module is generated
+     * 
+     * @access  private
+     */
     private function generateGetAdminAddFields() {
         $method = $this->class->addMethod("getAdminAddFields")
             ->setVisibility("public")
@@ -213,6 +294,7 @@ class ModuleGenerator {
         $method->addParameter("package");
         $method->addParameter("vars", null);
 
+        //generate dummy implementation with module field named "testField"
         $body_lines = array(
             'Loader::loadHelpers($this, array("Html"));',
             '$fields = new ModuleFields();' . "\n",
@@ -229,6 +311,11 @@ class ModuleGenerator {
         }
     }
 
+    /**
+     * Generates getAdminEditFields method for the module
+     * 
+     * Generates the method with a dummy implementation 
+     */
     private function generateGetAdminEditFields() {
         $method = $this->class->addMethod("getAdminEditFields")
             ->setVisibility("public")
