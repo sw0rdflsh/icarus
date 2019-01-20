@@ -15,7 +15,7 @@ if(isset($args["n"]) || isset($args["name"])) {
     $name = isset($args["n"]) ? $args["n"] : $args['name'];
 }
 $selected_type = null;
-$allowed_types = array("module", "plugin", "nm-gateway");
+$allowed_types = array("module", "plugin");
 $csv_type = null;
 if(isset($args["t"]) || isset($args["type"])) {
     $selected_type = isset($args["t"]) ? $args["t"] : $args['type'];
@@ -74,11 +74,11 @@ else if($name == null && $selected_type == null) {
                                         
     $desc = array(
         'Welcome to ICARUS, the blesta component generator',
-        'There are currently 3 (three) types of components that can be generated: plugins, modules, nonmerchant-gateways',
+        'There are currently 2 (two) types of components that can be generated: plugins and modules',
         '',
         'Parameters (REQUIRED):',
         "\t" . '-n/--name: name of the component',
-        "\t" . '-t/--type: type of the component (currently supported are plugin, module and nm-gateway)',
+        "\t" . '-t/--type: type of the component (currently supported are plugin and module)',
         '',
         'Parameters (OPTIONAL):',
         "\t" . '-o/--out: directory to save the created zip file to (specify like this --out="/home/")'
@@ -94,7 +94,7 @@ else {
     }
 
     if($selected_type == null) {
-        echo "ERROR(FATAL): Please specify the type of the component with --type/-t (currently supported are plugin, module and nm-gateway)\n";
+        echo "ERROR(FATAL): Please specify the type of the component with --type/-t (currently supported are plugin and module)\n";
     }
 }
 

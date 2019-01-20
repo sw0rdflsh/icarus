@@ -20,7 +20,6 @@ When composer is installed, run `composer install` in the directory this reposit
 
 * Generating Modules (this is finished the most)
 * Generating Plugins (Still in development)
-* Generating Non-merchant gateways (untested!)
 
 ## Usage ##
 
@@ -36,7 +35,6 @@ Type of the component to generate. Available types are:
 
 * module
 * plugin
-* nm-gateway (non-merchant gateway)
 
 #### -o/--out (Optional) ####
 
